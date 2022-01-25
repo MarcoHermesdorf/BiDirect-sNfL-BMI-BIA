@@ -1,0 +1,181 @@
+---
+title: "Longitudinal analyses of serum neurofilament light and its associations with body mass index, waist-to-height ratio, and bioelectrical impedance parameters: dilution effects in ultrasensitive assays?"
+output:
+  html_document:
+    highlight: tango
+    number_sections: no
+    theme: cerulean
+    toc: yes
+    toc_collapsed: no
+    toc_float: yes
+    code_folding: hide
+  pdf_document:
+    toc: yes
+    code_folding: hide
+---
+
+```{r load libraries, include=FALSE}
+
+list.of.packages <- c("psych", "reshape2", "ggplot2", "GPArotation", "lmtest", "nortest", "skimr", "DT", "table1", "corrplot", "jtools", "DescTools", "psych", "lmerTest", "afex", "plyr", "lattice", "parameters", "cNORM", "glmmTMB", "MASS")
+
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
+library("psych")
+library("reshape2")
+library("ggplot2")
+library("GPArotation")
+library("lmtest")
+library("nortest")
+library("skimr")
+library("DT")
+library("table1")
+library("corrplot")
+library("jtools")
+library("DescTools")
+library("psych")
+library("lmerTest")
+library ("afex")
+library ("plyr")
+library("lattice")
+library("parameters")
+library("cNORM")
+library("glmmTMB")
+library("sjPlot")
+library("MuMIn")
+library("MASS")
+
+```
+
+```{r load data, echo = TRUE}
+
+work.data <- haven::read_sav("/Volumes/Work/Projects/NfL-BMI/data/data_bmi_nfl.sav", encoding="latin1")
+
+idbidirect <- as.factor(work.data$idbidirect)
+
+work.data <- cbind(idbidirect, work.data[,2:ncol(work.data)])
+
+```
+
+## Density plots raw data
+
+```{r histograms, echo = TRUE}
+
+work.data <- cbind(work.data)
+
+work.data <- subset(work.data, exclude == 0 & kohorte == 3)
+
+work.data <- work.data[1:45]
+
+par(mfrow=c(3,3))
+
+for (r in 4:29){
+d_st1 <- density(work.data[,r], na.rm = TRUE)
+plot(d_st1, main = colnames(work.data[r]))
+polygon(d_st1, col="red", border="blue")} 
+
+```
+
+```{r reshape data set for mixed models, echo = TRUE, warning = FALSE}
+
+redux.data <- subset(work.data, select = c(idbidirect, sex_rev, s0_age, s0_log10_NfL, s0_bmi, s0_bia_kfett_k_kg, s0_bia_ecm, s0_bia_bcm, s0_bia_koerperwasser, s0_bsi, s0_WtHR, s2_age, s2_log10_NfL, s2_bmi, s2_bia_kfett_k_kg, s2_bia_ecm, s2_bia_bcm, s2_bia_koerperwasser, s2_bsi, s2_WtHR))
+
+# create data frame
+
+reshaped.data <- reshape(data=redux.data, idvar="idbidirect",
+
+	                         varying = c("s0_age", "s0_log10_NfL", "s0_bmi", "s0_bia_kfett_k_kg", "s0_bia_ecm", "s0_bia_bcm", "s0_bia_koerperwasser", "s0_bsi", "s0_WtHR", "s2_age", "s2_log10_NfL", "s2_bmi", "s2_bia_kfett_k_kg", "s2_bia_ecm", "s2_bia_bcm", "s2_bia_koerperwasser", "s2_bsi", "s2_WtHR"),
+
+	                         v.name=c("age", "bia_bcm", "bia_ecm", "bia_fett", "BMI", "log10_sNfL", "koerperwasser", "BSI", "WtHR"), 
+
+	                         times=c("1","2"),
+
+	                         direction="long")
+
+reshaped.data <- transform(reshaped.data, time = as.numeric(time))
+
+colnames(reshaped.data)[4:12] <- c("age", "log10_sNfL", "BMI", "bia_fett", "bia_ecm", "BSI", "koerperwasser", "bia_bcm", "WtHR")
+
+# filter missing or flawed observations
+
+reshaped.data <- subset(reshaped.data, !is.na(log10_sNfL) & !is.na(BMI) & !is.na(bia_fett) & !is.na(bia_ecm) & !is.na(BSI) & !is.na(koerperwasser) & !is.na(bia_bcm) & !is.na(WtHR) & bia_bcm > 0)
+
+#baseline.data <- subset(reshaped.data, time == 1)
+
+#fup1.data <- subset(reshaped.data, time == 2)
+
+# save dataset
+
+#setwd("/Volumes/Work/Projects/NfL-BMI/data")
+
+#write.table(reshaped.data, file = "final_sample.csv", row.names = FALSE, na = "",col.names = TRUE, sep = ";", dec = ",")
+
+#write.table(baseline.data, file = "baseline_data.csv", row.names = FALSE, na = "",col.names = TRUE, sep = ";", dec = ",")
+
+#write.table(fup1.data, file = "fup1_data.csv", row.names = FALSE, na = "",col.names = TRUE, sep = ";", dec = ",")
+
+```
+
+## Anthropometric indices of obesity: BMI, BSI, WtHR
+
+```{r mixed model: obesity, echo = TRUE, warning = FALSE}
+
+m1 <- lmer(log10_sNfL ~ (1|idbidirect) + age + sex_rev + BMI, data = reshaped.data, REML = TRUE)
+m2 <- lmer(log10_sNfL ~ (1|idbidirect) + age + sex_rev + BSI, data = reshaped.data, REML = TRUE)
+m3 <- lmer(log10_sNfL ~ (1|idbidirect) + age + sex_rev + WtHR, data = reshaped.data, REML = TRUE)
+
+summary(m1)
+confint(m1)
+r.squaredGLMM(m1)
+
+summary(m2)
+confint(m2)
+r.squaredGLMM(m2)
+
+summary(m3)
+confint(m3)
+r.squaredGLMM(m3)
+
+effect_plot(m1, pred = BMI, interval = TRUE, int.type = "confidence", partial.residuals = TRUE, x.label = "Body mass index", y.label = expression(log[10]~(sNfL)))+theme_bw()+theme(panel.grid = element_blank())
+
+effect_plot(m2, pred = BSI, interval = TRUE, int.type = "confidence", partial.residuals = TRUE, x.label = "Body shape index", y.label = expression(log[10]~(sNfL)))+theme_bw()+theme(panel.grid = element_blank())
+
+effect_plot(m3, pred = WtHR, interval = TRUE, int.type = "confidence", partial.residuals = TRUE, x.label = "Waist to height ratio", y.label = expression(log[10]~(sNfL)))+theme_bw()+theme(panel.grid = element_blank())
+
+```
+
+## Bioelectrical impedance analysis: BCM, ECM, BFM
+
+```{r mixed model: BIA, echo = TRUE, warning = FALSE}
+
+m1 <- lmer(log10_sNfL ~ (1|idbidirect) + age + sex_rev + bia_bcm + bia_ecm + bia_fett, data = reshaped.data, REML=TRUE)
+
+summary(m1)
+
+confint(m1)
+
+r.squaredGLMM(m1)
+                  
+effect_plot(m1, pred = bia_fett, interval = TRUE, int.type = "confidence", partial.residuals = TRUE, x.label = "Body fat mass (kg)", y.label = expression(log[10]~(sNfL)))+theme_bw()+theme(panel.grid = element_blank())
+
+effect_plot(m1, pred = bia_bcm, interval = TRUE, int.type = "confidence", partial.residuals = TRUE, x.label = "Body cell mass (kg)", y.label = expression(log[10]~(sNfL)))+theme_bw()+theme(panel.grid = element_blank())
+
+effect_plot(m1, pred = bia_ecm, interval = TRUE, int.type = "confidence", partial.residuals = TRUE, x.label = "Extracellular mass (kg)", y.label = expression(log[10]~(sNfL)))+theme_bw()+theme(panel.grid = element_blank())
+
+```
+
+## Total body water
+
+```{r mixed model 3, echo = TRUE, warning = FALSE}
+
+m1 <- lmer(log10_sNfL ~ (1|idbidirect) + age + sex_rev + koerperwasser, data = reshaped.data, REML=TRUE)
+
+summary(m1)
+
+confint(m1)
+
+r.squaredGLMM(m1)
+                  
+effect_plot(m1, pred = koerperwasser, interval = TRUE, int.type = "confidence", partial.residuals = TRUE, x.label = "Total body water (kg)", y.label = expression(log[10]~(sNfL)))+theme_bw()+theme(panel.grid = element_blank())
+
+```
