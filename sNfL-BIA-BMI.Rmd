@@ -16,7 +16,7 @@ output:
 
 ```{r load libraries, include=FALSE}
 
-list.of.packages <- c("haven" ,"psych", "reshape2", "pillar", "ggplot2", "GPArotation", "lmtest", "nortest", "skimr", "DT", "table1", "corrplot", "jtools", "DescTools", "psych", "lmerTest", "afex", "plyr", "lattice", "parameters", "cNORM", "glmmTMB", "sjPlot", "MuMIn", "MASS")
+list.of.packages <- c("haven" ,"psych", "reshape2", "pillar", "ggplot2", "GPArotation", "lmtest", "nortest", "skimr", "DT", "table1", "corrplot", "jtools", "DescTools", "psych", "lmerTest", "afex", "plyr", "lattice", "parameters", "cNORM", "glmmTMB", "sjPlot", "MuMIn", "MASS", "partR2")
 
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
@@ -46,6 +46,7 @@ library("glmmTMB")
 library("sjPlot")
 library("MuMIn")
 library("MASS")
+library("partR2")
 
 ```
 
@@ -129,6 +130,7 @@ m1 <- lm(log10_sNfL ~ age + sex_rev + BMI, data = baseline.data)
 summary(m1)
 confint(m1)
 r.squaredGLMM(m1)
+EtaSq(m1)
 
 effect_plot(m1, pred = BMI, interval = TRUE, int.type = "confidence", partial.residuals = TRUE, x.label = "Body mass index", y.label = expression(log[10]~(sNfL)))+theme_bw()+theme(panel.grid = element_blank())
 
@@ -145,14 +147,17 @@ m3 <- lmer(log10_sNfL ~ (1|idbidirect) + age + sex_rev + WtHR, data = reshaped.d
 summary(m1)
 confint(m1)
 r.squaredGLMM(m1)
+partR2(m1, partvars = c("BMI", "age", "sex_rev"), R2_type = "marginal")
 
 summary(m2)
 confint(m2)
 r.squaredGLMM(m2)
+partR2(m2, partvars = c("BSI", "age", "sex_rev"), R2_type = "marginal")
 
 summary(m3)
 confint(m3)
 r.squaredGLMM(m3)
+partR2(m3, partvars = c("WtHR", "age", "sex_rev"), R2_type = "marginal")
 
 effect_plot(m1, pred = BMI, interval = TRUE, int.type = "confidence", partial.residuals = TRUE, x.label = "Body mass index", y.label = expression(log[10]~(sNfL)))+theme_bw()+theme(panel.grid = element_blank())
 
@@ -172,8 +177,10 @@ summary(m1)
 
 confint(m1)
 
+partR2(m1, partvars = c("bia_bcm", "bia_ecm", "bia_fett", "age", "sex_rev"), R2_type = "marginal")
+
 r.squaredGLMM(m1)
-                  
+
 effect_plot(m1, pred = bia_fett, interval = TRUE, int.type = "confidence", partial.residuals = TRUE, x.label = "Body fat mass (kg)", y.label = expression(log[10]~(sNfL)))+theme_bw()+theme(panel.grid = element_blank())
 
 effect_plot(m1, pred = bia_bcm, interval = TRUE, int.type = "confidence", partial.residuals = TRUE, x.label = "Body cell mass (kg)", y.label = expression(log[10]~(sNfL)))+theme_bw()+theme(panel.grid = element_blank())
@@ -191,6 +198,8 @@ m1 <- lmer(log10_sNfL ~ (1|idbidirect) + age + sex_rev + koerperwasser, data = r
 summary(m1)
 
 confint(m1)
+
+partR2(m1, partvars = c("koerperwasser", "age", "sex_rev"), R2_type = "marginal")
 
 r.squaredGLMM(m1)
                   
